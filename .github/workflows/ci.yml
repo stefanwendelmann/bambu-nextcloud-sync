@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint shell scripts
+        # The entry point and the unit tests pull in every module, so each one is checked in context.
+        run: shellcheck src/entrypoint.sh tests/unit/run.sh tests/integration/run.sh tests/integration/ftps/entrypoint.sh
+
+      - name: Validate the Compose example
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+      - name: Build image and run unit tests
+        run: |
+          docker build --target test .
+          docker build --tag bambu-nextcloud-sync:test .
+
+      - name: Check the example configuration
+        run: |
+          # The unedited template must be rejected because of its placeholders ...
+          if docker run --rm --env-file .env.example bambu-nextcloud-sync:test --check-config; then
+            echo "The unedited .env.example was accepted." >&2
+            exit 1
+          fi
+          # ... and be valid once the five required values are filled in.
+          docker run --rm --env-file .env.example \
+            -e BAMBU_HOST=printer.lan -e BAMBU_ACCESS_CODE=00000000 \
+            -e NEXTCLOUD_WEBDAV_URL=https://nextcloud.example.com/remote.php/dav/files/user/ \
+            -e NEXTCLOUD_USERNAME=user -e NEXTCLOUD_APP_PASSWORD=example \
+            bambu-nextcloud-sync:test --check-config
+
+      - name: Integration tests (printer stand-in and real Nextcloud)
+        run: bash tests/integration/run.sh
+
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Unit tests on arm64
+        run: docker build --platform linux/arm64 --target test .

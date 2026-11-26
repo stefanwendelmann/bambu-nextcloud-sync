@@ -1,0 +1,3 @@
+# BusyBox ash (the container shell) supports `local`.
+disable=SC3043
+external-sources=true

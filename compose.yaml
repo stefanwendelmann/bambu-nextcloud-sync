@@ -1,0 +1,16 @@
+services:
+  bambu-nextcloud-sync:
+    image: ghcr.io/stefanwendelmann/bambu-nextcloud-sync:latest
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    volumes:
+      - ./data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
