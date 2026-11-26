@@ -46,7 +46,7 @@ jobs:
       - name: Integration tests (printer stand-in and real Nextcloud)
         run: bash tests/integration/run.sh
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
 
